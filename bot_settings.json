@@ -1,0 +1,20 @@
+{
+    "bot_token": "8801860264:AAGeuZSJxC34D85o8Iy1PeKu4ueJmC1NLd8",
+    "admin_telegram_id": "1817914190",
+    "usdt_wallets": {
+        "TON": "UQCN7dmgjFKPKRPC5aoYiob72LBWlaBEqXEXEEXv15PXwauQ",
+        "TRC20": "TJAHQ5eVzDDLSwSjEa5Hti4gXk1TNBCskw",
+        "SPL": "453MLTQtm7b4sZi7eQYMbkGHEfG9sD7wQxb8qAQCWiVx",
+        "ERC20": "0xFc9F0ed341EDC3aB6894a5a1426245b2A1038Cd1",
+        "BEP20": "0xFc9F0ed341EDC3aB6894a5a1426245b2A1038Cd1"
+    },
+    "prices": {
+        "trial": 0,
+        "week": 15,
+        "month": 30
+    },
+    "trial_days": 0.25,
+    "week_days": 7,
+    "month_days": 30,
+    "apk_url": "http://keycodm.atwebpages.com/app.apk"
+}
