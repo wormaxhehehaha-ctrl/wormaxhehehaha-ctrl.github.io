@@ -15,13 +15,16 @@ WALLETS = settings['usdt_wallets']
 PRICES = settings['prices']
 APK_URL = settings.get('apk_url', 'http://keycodm.atwebpages.com/app.apk')
 
+# API keys
+ETHERSCAN_KEY = 'ZY83K9SN25FUCQE77EVMVVRZR1I4VCH96T'
+TON_API_KEY = '157dd7ed7dcab4c0dc6d736f7a0c873f4b166b78291fb95892c9b240a7b9167b'
+
 requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook', timeout=5)
 time.sleep(1)
 
 bot = telebot.TeleBot(BOT_TOKEN)
 print("🤖 Bot started!")
 
-# Download APK
 APK_DATA = None
 try:
     resp = requests.get(APK_URL, timeout=30)
@@ -47,7 +50,10 @@ def send_apk(chat_id):
             pass
     bot.send_message(chat_id, f"📥 Download APK: {APK_URL}")
 
+# ========== PAYMENT CHECKS ==========
+
 def check_trc20(wallet, amount):
+    """TRC20 USDT via TronGrid"""
     try:
         url = f"https://api.trongrid.io/v1/accounts/{wallet}/transactions/trc20?limit=10&only_confirmed=true"
         resp = requests.get(url, timeout=10)
@@ -61,10 +67,72 @@ def check_trc20(wallet, amount):
     except:
         return False
 
+def check_bep20(wallet, amount):
+    """BEP20 USDT via BscScan"""
+    try:
+        url = f"https://api.bscscan.com/api?module=account&action=tokentx&address={wallet}&sort=desc&apikey={ETHERSCAN_KEY}"
+        resp = requests.get(url, timeout=10)
+        data = resp.json()
+        if data.get('status') == '1' and 'result' in data:
+            for tx in data['result']:
+                if time.time() - int(tx.get('timeStamp', 0)) > 600:
+                    continue
+                if tx.get('to','').lower() == wallet.lower():
+                    tx_amount = int(tx.get('value', 0)) / 1000000000000000000
+                    if tx_amount >= amount * 0.95:
+                        return True
+        return False
+    except:
+        return False
+
+def check_erc20(wallet, amount):
+    """ERC20 USDT via Etherscan"""
+    try:
+        url = f"https://api.etherscan.io/api?module=account&action=tokentx&address={wallet}&sort=desc&apikey={ETHERSCAN_KEY}"
+        resp = requests.get(url, timeout=10)
+        data = resp.json()
+        if data.get('status') == '1' and 'result' in data:
+            for tx in data['result']:
+                if time.time() - int(tx.get('timeStamp', 0)) > 600:
+                    continue
+                if tx.get('to','').lower() == wallet.lower():
+                    tx_amount = int(tx.get('value', 0)) / 1000000000000000000
+                    if tx_amount >= amount * 0.95:
+                        return True
+        return False
+    except:
+        return False
+
+def check_ton(wallet, amount):
+    """TON via TonCenter"""
+    try:
+        headers = {'X-API-Key': TON_API_KEY}
+        url = f"https://toncenter.com/api/v2/getTransactions?address={wallet}&limit=10&archival=false"
+        resp = requests.get(url, headers=headers, timeout=10)
+        data = resp.json()
+        if data.get('ok') and 'result' in data:
+            for tx in data['result']:
+                if time.time() - tx.get('utime', 0) > 600:
+                    continue
+                if 'in_msg' in tx and 'value' in tx['in_msg']:
+                    value = int(tx['in_msg']['value']) / 1000000000
+                    if value >= amount * 0.95:
+                        return True
+        return False
+    except:
+        return False
+
 def check_payment(network, wallet, amount):
+    """Check payment for any network"""
     if network == "TRC20":
         return check_trc20(wallet, amount)
-    return None  # Other networks - admin verifies
+    elif network == "BEP20":
+        return check_bep20(wallet, amount)
+    elif network == "ERC20":
+        return check_erc20(wallet, amount)
+    elif network == "TON":
+        return check_ton(wallet, amount)
+    return False
 
 # ========== COMMANDS ==========
 
@@ -72,7 +140,7 @@ def check_payment(network, wallet, amount):
 def start(msg):
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     kb.add("FREE Trial", "Buy Plan", "Profile", "Support")
-    bot.send_message(msg.chat.id, "⚡ CODM ELITE SHOP", reply_markup=kb)
+    bot.send_message(msg.chat.id, "⚡ CODM ELITE SHOP\n@CODM_KEYSHOP_BOT", reply_markup=kb)
 
 @bot.message_handler(commands=['buy'])
 def buy(msg):
@@ -89,7 +157,7 @@ def buy(msg):
 def profile(msg):
     d = api('profile', user_id=str(msg.from_user.id))
     t = "USED" if d.get('has_trial') else "AVAILABLE"
-    bot.send_message(msg.chat.id, f"👤 Profile\n\nID: {msg.from_user.id}\nTrial: {t}")
+    bot.send_message(msg.chat.id, f"👤 Profile\nID: {msg.from_user.id}\nTrial: {t}")
 
 @bot.message_handler(commands=['support'])
 def support(msg):
@@ -107,7 +175,6 @@ def test(msg):
     )
     bot.send_message(msg.chat.id, "🧪 ADMIN TEST", reply_markup=kb)
 
-# Text buttons
 @bot.message_handler(func=lambda m: m.text and "Trial" in m.text)
 def t_trial(msg):
     d = api('get_trial', user_id=str(msg.from_user.id))
@@ -115,7 +182,7 @@ def t_trial(msg):
         bot.send_message(msg.chat.id, f"✅ KEY: {d['key']}\n⏰ 6h\n📱 1 device")
         send_apk(msg.chat.id)
     else:
-        bot.send_message(msg.chat.id, f"❌ {d.get('error','Error')}")
+        bot.send_message(msg.chat.id, d.get('error','Error'))
 
 @bot.message_handler(func=lambda m: m.text and "Buy" in m.text)
 def t_buy(msg): buy(msg)
@@ -126,12 +193,9 @@ def t_profile(msg): profile(msg)
 @bot.message_handler(func=lambda m: m.text and "Support" in m.text)
 def t_support(msg): support(msg)
 
-# ========== CALLBACKS ==========
-
 @bot.callback_query_handler(func=lambda call: True)
 def cb(call):
     d = call.data
-    
     if d == 'cancel':
         try:
             bot.delete_message(call.message.chat.id, call.message.message_id)
@@ -158,11 +222,8 @@ def cb(call):
             types.InlineKeyboardButton("BEP20", callback_data=f"net_{d}_BEP20"),
             types.InlineKeyboardButton("ERC20", callback_data=f"net_{d}_ERC20")
         )
-        kb.add(
-            types.InlineKeyboardButton("Back", callback_data="back"),
-            types.InlineKeyboardButton("Cancel", callback_data="cancel")
-        )
-        bot.edit_message_text(f"{d.upper()} - {price}$ USDT\n\nChoose payment network:", call.message.chat.id, call.message.message_id, reply_markup=kb)
+        kb.add(types.InlineKeyboardButton("Back", callback_data="back"), types.InlineKeyboardButton("Cancel", callback_data="cancel"))
+        bot.edit_message_text(f"{d.upper()} - {price}$ USDT\n\nChoose network:", call.message.chat.id, call.message.message_id, reply_markup=kb)
         return
     
     if d == 'back':
@@ -187,11 +248,7 @@ def cb(call):
         kb.add(types.InlineKeyboardButton("Cancel", callback_data="cancel"))
         
         bot.edit_message_text(
-            f"💰 Send EXACTLY {price}$ USDT\n\n"
-            f"📡 Network: {net}\n"
-            f"🔑 Wallet:\n{wallet}\n\n"
-            f"⚠️ Send ONLY USDT via {net}!\n"
-            f"✅ Then click VERIFY PAYMENT",
+            f"💰 Send {price}$ USDT\n\n📡 Network: {net}\n🔑 Wallet:\n{wallet}\n\n⚠️ Send ONLY USDT via {net}!\n✅ Click VERIFY after sending",
             call.message.chat.id, call.message.message_id, reply_markup=kb)
         return
     
@@ -201,16 +258,19 @@ def cb(call):
         wallet = WALLETS.get(net, '')
         user_id = str(call.from_user.id)
         
-        bot.edit_message_text("🔍 Checking payment on blockchain...\n\n⏳ Please wait...", call.message.chat.id, call.message.message_id)
+        bot.edit_message_text(f"🔍 Checking {net} blockchain...\n\n⏳ Please wait...", call.message.chat.id, call.message.message_id)
         bot.answer_callback_query(call.id, "Checking...")
         
-        # CHECK PAYMENT
-        paid = check_payment(net, wallet, price)
+        # CHECK PAYMENT (ALL NETWORKS)
+        paid = False
+        for i in range(3):  # 3 attempts
+            time.sleep(3)
+            paid = check_payment(net, wallet, price)
+            if paid:
+                break
         
-        if paid is True:
-            # PAYMENT CONFIRMED - GIVE KEY
+        if paid:
             r = api('get_paid_key', type=plan, user_id=user_id)
-            
             if r.get('key'):
                 dur = '30 days' if plan == 'month' else '7 days'
                 dev = '5 devices' if plan == 'month' else '1 device'
@@ -223,52 +283,20 @@ def cb(call):
                     pass
             else:
                 bot.edit_message_text(f"❌ Error: {r.get('error','No keys')}", call.message.chat.id, call.message.message_id)
-        
-        elif paid is False:
-            # PAYMENT NOT FOUND
+        else:
             kb = types.InlineKeyboardMarkup()
             kb.add(types.InlineKeyboardButton("🔄 Check Again", callback_data=f"verify_{plan}_{net}"))
             kb.add(types.InlineKeyboardButton("📩 Contact Admin", url="https://t.me/idkidk1010"))
             
             bot.edit_message_text(
                 f"❌ Payment NOT detected!\n\n"
-                f"📡 Network: {net}\n"
-                f"💰 Amount: {price}$ USDT\n"
-                f"🔑 Wallet:\n{wallet}\n\n"
-                f"⚠️ Make sure you:\n"
-                f"• Sent EXACTLY {price}$ USDT\n"
-                f"• Used {net} network\n"
-                f"• Sent to correct address\n\n"
+                f"📡 {net} | 💰 {price}$ USDT\n\n"
+                f"⚠️ Check:\n"
+                f"• Correct network\n"
+                f"• Exact amount\n"
+                f"• Correct wallet\n\n"
                 f"Try again or contact admin",
                 call.message.chat.id, call.message.message_id, reply_markup=kb)
-        
-        else:
-            # CANNOT AUTO-VERIFY (BEP20, ERC20, TON)
-            # Send to admin for manual verification
-            kb = types.InlineKeyboardMarkup()
-            kb.add(types.InlineKeyboardButton("📩 Contact Admin", url="https://t.me/idkidk1010"))
-            
-            bot.edit_message_text(
-                f"⚠️ Auto-verification for {net} is not available\n\n"
-                f"Your payment will be verified by admin.\n"
-                f"Admin will send you the key after checking.\n\n"
-                f"📩 Contact: @idkidk1010",
-                call.message.chat.id, call.message.message_id, reply_markup=kb)
-            
-            # Notify admin
-            try:
-                bot.send_message(
-                    ADMIN_ID,
-                    f"🔔 Payment to verify!\n\n"
-                    f"User: {call.from_user.first_name}\n"
-                    f"Plan: {plan}\n"
-                    f"Network: {net}\n"
-                    f"Amount: {price}$\n"
-                    f"Wallet: {wallet}",
-                    parse_mode="Markdown"
-                )
-            except:
-                pass
         return
     
     if d.startswith('adm_'):
@@ -278,10 +306,10 @@ def cb(call):
         act = 'get_trial' if plan == 'trial' else 'get_paid_key'
         r = api(act, type=plan, user_id='admin')
         if r.get('key'):
-            bot.send_message(call.message.chat.id, f"✅ TEST KEY: {r['key']}")
+            bot.send_message(call.message.chat.id, f"✅ TEST: {r['key']}")
             send_apk(call.message.chat.id)
             bot.answer_callback_query(call.id, "Sent!")
         return
 
-print("✅ Bot ready!")
+print("✅ Bot ready! All networks checked.")
 bot.polling(none_stop=True)
