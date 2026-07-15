@@ -3,6 +3,7 @@ import telebot
 from telebot import types
 import requests
 import time
+import threading
 
 BOT_TOKEN = '8886583166:AAEOOLPEX_sDW6ivAwpvesHjGbtDjQa4mi8'
 
@@ -13,25 +14,29 @@ ADMIN_ID = str(settings['admin_telegram_id'])
 API_URL = 'http://keycodm.atwebpages.com/bot_api.php'
 WALLETS = settings['usdt_wallets']
 PRICES = settings['prices']
-APK_URL = settings.get('apk_url', 'http://keycodm.atwebpages.com/app.apk')
+APK_URL = settings.get('apk_url', 'https://raw.githubusercontent.com/wormaxhehehaha-ctrl/Idk/main/app.apk')
 
-# API keys
 ETHERSCAN_KEY = 'ZY83K9SN25FUCQE77EVMVVRZR1I4VCH96T'
 TON_API_KEY = '157dd7ed7dcab4c0dc6d736f7a0c873f4b166b78291fb95892c9b240a7b9167b'
 
+# Kill old sessions
 requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook', timeout=5)
 time.sleep(1)
 
 bot = telebot.TeleBot(BOT_TOKEN)
-print("🤖 Bot started!")
+print("🤖 Bot starting...")
 
+# Download APK to memory
 APK_DATA = None
 try:
     resp = requests.get(APK_URL, timeout=30)
     if resp.status_code == 200:
         APK_DATA = resp.content
+        print(f"APK loaded: {len(APK_DATA)} bytes")
 except:
-    pass
+    print("APK download failed, will send link")
+
+# ========== API ==========
 
 def api(action, **params):
     params['action'] = action
@@ -44,86 +49,72 @@ def api(action, **params):
 def send_apk(chat_id):
     if APK_DATA:
         try:
-            bot.send_document(chat_id, APK_DATA, visible_file_name="CODM_ELITE.apk", caption="CODM ELITE")
+            bot.send_document(chat_id, APK_DATA, visible_file_name="CODM_ELITE.apk", caption="📱 CODM ELITE")
             return
         except:
             pass
-    bot.send_message(chat_id, f"📥 Download APK: {APK_URL}")
+    bot.send_message(chat_id, f"📥 Download APK:\n{APK_URL}")
 
 # ========== PAYMENT CHECKS ==========
 
 def check_trc20(wallet, amount):
-    """TRC20 USDT via TronGrid"""
     try:
         url = f"https://api.trongrid.io/v1/accounts/{wallet}/transactions/trc20?limit=10&only_confirmed=true"
-        resp = requests.get(url, timeout=10)
-        data = resp.json()
+        data = requests.get(url, timeout=10).json()
         for tx in data.get('data', []):
             if time.time() - tx.get('block_timestamp', 0)/1000 < 600:
-                if tx.get('to','').lower() == wallet.lower():
-                    if int(tx.get('value',0))/1000000 >= amount * 0.95:
+                if tx.get('to', '').lower() == wallet.lower():
+                    if int(tx.get('value', 0))/1000000 >= amount * 0.95:
                         return True
         return False
     except:
         return False
 
 def check_bep20(wallet, amount):
-    """BEP20 USDT via BscScan"""
     try:
         url = f"https://api.bscscan.com/api?module=account&action=tokentx&address={wallet}&sort=desc&apikey={ETHERSCAN_KEY}"
-        resp = requests.get(url, timeout=10)
-        data = resp.json()
-        if data.get('status') == '1' and 'result' in data:
-            for tx in data['result']:
-                if time.time() - int(tx.get('timeStamp', 0)) > 600:
-                    continue
-                if tx.get('to','').lower() == wallet.lower():
-                    tx_amount = int(tx.get('value', 0)) / 1000000000000000000
-                    if tx_amount >= amount * 0.95:
-                        return True
+        data = requests.get(url, timeout=10).json()
+        if data.get('status') == '1':
+            for tx in data.get('result', []):
+                if time.time() - int(tx.get('timeStamp', 0)) < 600:
+                    if tx.get('to', '').lower() == wallet.lower():
+                        if int(tx.get('value', 0))/1e18 >= amount * 0.95:
+                            return True
         return False
     except:
         return False
 
 def check_erc20(wallet, amount):
-    """ERC20 USDT via Etherscan"""
     try:
         url = f"https://api.etherscan.io/api?module=account&action=tokentx&address={wallet}&sort=desc&apikey={ETHERSCAN_KEY}"
-        resp = requests.get(url, timeout=10)
-        data = resp.json()
-        if data.get('status') == '1' and 'result' in data:
-            for tx in data['result']:
-                if time.time() - int(tx.get('timeStamp', 0)) > 600:
-                    continue
-                if tx.get('to','').lower() == wallet.lower():
-                    tx_amount = int(tx.get('value', 0)) / 1000000000000000000
-                    if tx_amount >= amount * 0.95:
-                        return True
+        data = requests.get(url, timeout=10).json()
+        if data.get('status') == '1':
+            for tx in data.get('result', []):
+                if time.time() - int(tx.get('timeStamp', 0)) < 600:
+                    if tx.get('to', '').lower() == wallet.lower():
+                        if int(tx.get('value', 0))/1e18 >= amount * 0.95:
+                            return True
         return False
     except:
         return False
 
 def check_ton(wallet, amount):
-    """TON via TonCenter"""
     try:
         headers = {'X-API-Key': TON_API_KEY}
-        url = f"https://toncenter.com/api/v2/getTransactions?address={wallet}&limit=10&archival=false"
-        resp = requests.get(url, headers=headers, timeout=10)
-        data = resp.json()
+        url = f"https://toncenter.com/api/v2/getTransactions?address={wallet}&limit=10"
+        data = requests.get(url, headers=headers, timeout=10).json()
         if data.get('ok') and 'result' in data:
             for tx in data['result']:
-                if time.time() - tx.get('utime', 0) > 600:
-                    continue
-                if 'in_msg' in tx and 'value' in tx['in_msg']:
-                    value = int(tx['in_msg']['value']) / 1000000000
-                    if value >= amount * 0.95:
-                        return True
+                if time.time() - tx.get('utime', 0) < 600:
+                    if 'in_msg' in tx and 'value' in tx['in_msg']:
+                        value = int(tx['in_msg']['value']) / 1e9
+                        if value >= amount * 0.95:
+                            return True
         return False
     except:
         return False
 
 def check_payment(network, wallet, amount):
-    """Check payment for any network"""
     if network == "TRC20":
         return check_trc20(wallet, amount)
     elif network == "BEP20":
@@ -182,7 +173,7 @@ def t_trial(msg):
         bot.send_message(msg.chat.id, f"✅ KEY: {d['key']}\n⏰ 6h\n📱 1 device")
         send_apk(msg.chat.id)
     else:
-        bot.send_message(msg.chat.id, d.get('error','Error'))
+        bot.send_message(msg.chat.id, d.get('error', 'Error'))
 
 @bot.message_handler(func=lambda m: m.text and "Buy" in m.text)
 def t_buy(msg): buy(msg)
@@ -210,7 +201,7 @@ def cb(call):
             send_apk(call.message.chat.id)
             bot.answer_callback_query(call.id, "Sent!")
         else:
-            bot.answer_callback_query(call.id, r.get('error','Error'), show_alert=True)
+            bot.answer_callback_query(call.id, r.get('error', 'Error'), show_alert=True)
         return
     
     if d in ['week', 'month']:
@@ -248,7 +239,7 @@ def cb(call):
         kb.add(types.InlineKeyboardButton("Cancel", callback_data="cancel"))
         
         bot.edit_message_text(
-            f"💰 Send {price}$ USDT\n\n📡 Network: {net}\n🔑 Wallet:\n{wallet}\n\n⚠️ Send ONLY USDT via {net}!\n✅ Click VERIFY after sending",
+            f"💰 Send {price}$ USDT\n\n📡 Network: {net}\n🔑 Wallet:\n{wallet}\n\n⚠️ Send ONLY USDT!\n✅ Click VERIFY after sending",
             call.message.chat.id, call.message.message_id, reply_markup=kb)
         return
     
@@ -258,12 +249,11 @@ def cb(call):
         wallet = WALLETS.get(net, '')
         user_id = str(call.from_user.id)
         
-        bot.edit_message_text(f"🔍 Checking {net} blockchain...\n\n⏳ Please wait...", call.message.chat.id, call.message.message_id)
+        bot.edit_message_text(f"🔍 Checking {net} blockchain...", call.message.chat.id, call.message.message_id)
         bot.answer_callback_query(call.id, "Checking...")
         
-        # CHECK PAYMENT (ALL NETWORKS)
         paid = False
-        for i in range(3):  # 3 attempts
+        for i in range(3):
             time.sleep(3)
             paid = check_payment(net, wallet, price)
             if paid:
@@ -276,26 +266,20 @@ def cb(call):
                 dev = '5 devices' if plan == 'month' else '1 device'
                 bot.send_message(call.message.chat.id, f"✅ PAYMENT CONFIRMED!\n\n🔑 KEY: {r['key']}\n📅 {dur}\n📱 {dev}")
                 send_apk(call.message.chat.id)
-                bot.edit_message_text("✅ Payment verified! Check messages.", call.message.chat.id, call.message.message_id)
+                bot.edit_message_text("✅ Sent! Check messages.", call.message.chat.id, call.message.message_id)
                 try:
                     bot.send_message(ADMIN_ID, f"💰 SALE! {plan} | {net} | {price}$")
                 except:
                     pass
             else:
-                bot.edit_message_text(f"❌ Error: {r.get('error','No keys')}", call.message.chat.id, call.message.message_id)
+                bot.edit_message_text(f"❌ {r.get('error', 'No keys')}", call.message.chat.id, call.message.message_id)
         else:
             kb = types.InlineKeyboardMarkup()
             kb.add(types.InlineKeyboardButton("🔄 Check Again", callback_data=f"verify_{plan}_{net}"))
             kb.add(types.InlineKeyboardButton("📩 Contact Admin", url="https://t.me/idkidk1010"))
             
             bot.edit_message_text(
-                f"❌ Payment NOT detected!\n\n"
-                f"📡 {net} | 💰 {price}$ USDT\n\n"
-                f"⚠️ Check:\n"
-                f"• Correct network\n"
-                f"• Exact amount\n"
-                f"• Correct wallet\n\n"
-                f"Try again or contact admin",
+                f"❌ Payment NOT detected!\n\n📡 {net} | 💰 {price}$\n\nCheck and try again or contact admin",
                 call.message.chat.id, call.message.message_id, reply_markup=kb)
         return
     
@@ -311,5 +295,17 @@ def cb(call):
             bot.answer_callback_query(call.id, "Sent!")
         return
 
-print("✅ Bot ready! All networks checked.")
+# ========== SELF-PING ==========
+
+def self_ping():
+    while True:
+        time.sleep(300)
+        try:
+            requests.get('https://codmelitebot.onrender.com', timeout=10)
+        except:
+            pass
+
+threading.Thread(target=self_ping, daemon=True).start()
+
+print("✅ Bot ready with self-ping!")
 bot.polling(none_stop=True)
