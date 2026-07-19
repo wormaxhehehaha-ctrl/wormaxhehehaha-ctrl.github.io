@@ -54,6 +54,7 @@ checkPassword();
   .stat-label { font-size: 7px; letter-spacing: 2px; color: rgba(255,255,255,0.4); margin-top: 2px; text-transform: uppercase; }
   .copy-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--cyan); color: #000; padding: 8px 18px; border-radius: 14px; font-size: 9px; letter-spacing: 2px; font-weight: 600; opacity: 0; transition: 0.25s; pointer-events: none; z-index: 999; }
   .copy-toast.show { opacity: 1; }
+  pre { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; font-family: monospace; margin: 8px 0; max-height: 200px; overflow-y: auto; }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet">
 </head>
@@ -63,6 +64,8 @@ checkPassword();
     <div style="font-family:'Russo One',sans-serif;font-size:20px;letter-spacing:7px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ADMIN PANEL</div>
     <div style="font-size:7px;letter-spacing:3px;color:rgba(255,255,255,0.3);text-transform:uppercase;">VIP Key Management</div>
   </div>
+
+  <!-- GENERATE KEY -->
   <div class="card">
     <div class="card-title">// Generate VIP Key</div>
     <label>Time Unit</label>
@@ -83,10 +86,14 @@ checkPassword();
       <div style="font-size:7px;letter-spacing:1px;color:rgba(255,255,255,0.25);margin-top:4px;">Send this key to the client</div>
     </div>
   </div>
+
+  <!-- KEY LIST -->
   <div class="card">
     <div class="card-title">// All Keys</div>
     <div class="key-list" id="keyList"><div style="color:rgba(255,255,255,0.3);font-size:8px;">No keys created</div></div>
   </div>
+
+  <!-- STATISTICS -->
   <div class="card">
     <div class="card-title">// Statistics</div>
     <div class="stat-grid">
@@ -96,15 +103,28 @@ checkPassword();
       <div class="stat-item"><div class="stat-val" id="statDevices">0</div><div class="stat-label">Devices</div></div>
     </div>
   </div>
+
+  <!-- BLACKLIST -->
+  <div class="card">
+    <div class="card-title">// Blacklist (paste to GitHub)</div>
+    <pre id="blacklistBox">[]</pre>
+    <button class="btn" onclick="copyBlacklist()">Copy Blacklist</button>
+    <div style="font-size:6px;letter-spacing:1px;color:rgba(255,255,255,0.25);margin-top:4px;">Copy → paste into blacklist.json on GitHub</div>
+  </div>
+
+  <!-- DANGER ZONE -->
   <div class="card" style="text-align:center;">
     <button class="btn btn-danger" onclick="clearAllKeys()">Clear All Keys</button>
     <div style="font-size:6px;letter-spacing:1px;color:rgba(255,255,255,0.2);margin-top:5px;">Permanent · cannot be undone</div>
   </div>
 </div>
+
 <div class="copy-toast" id="toast">COPIED ✓</div>
+
 <script>
   const ADMIN_STORAGE = 'chito_admin_keys';
   let timeUnit = 'hours';
+
   document.querySelectorAll('#timeUnitGroup .toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#timeUnitGroup .toggle-btn').forEach(b => b.classList.remove('active'));
@@ -113,8 +133,17 @@ checkPassword();
       document.getElementById('unitLabel').textContent = timeUnit;
     });
   });
+
   function getKeys() { return JSON.parse(localStorage.getItem(ADMIN_STORAGE) || '[]'); }
   function saveKeys(keys) { localStorage.setItem(ADMIN_STORAGE, JSON.stringify(keys)); }
+
+  function getBlacklist() { return JSON.parse(localStorage.getItem('lagcfg_blacklist') || '[]'); }
+  function saveBlacklist(bl) { localStorage.setItem('lagcfg_blacklist', JSON.stringify(bl)); updateBlacklistUI(); }
+
+  function updateBlacklistUI() {
+    document.getElementById('blacklistBox').textContent = JSON.stringify(getBlacklist(), null, 2);
+  }
+
   function generateKey() {
     const durationValue = parseInt(document.getElementById('durationValue').value);
     const maxDevices = parseInt(document.getElementById('maxDevices').value);
@@ -134,12 +163,21 @@ checkPassword();
     document.getElementById('generatedLink').style.display = 'block';
     renderKeyList(); updateStats();
   }
+
   function deleteKey(keyId) {
     let keys = getKeys();
     keys = keys.filter(k => k.id !== keyId);
     saveKeys(keys);
+
+    // Добавляем в чёрный список
+    let bl = getBlacklist();
+    if (!bl.includes(keyId)) {
+      bl.push(keyId);
+      saveBlacklist(bl);
+    }
     renderKeyList(); updateStats();
   }
+
   function copyKey() {
     const key = document.getElementById('activationLink').textContent;
     navigator.clipboard.writeText(key).then(() => {
@@ -148,16 +186,30 @@ checkPassword();
       setTimeout(() => toast.classList.remove('show'), 1700);
     });
   }
+
+  function copyBlacklist() {
+    const bl = JSON.stringify(getBlacklist(), null, 2);
+    navigator.clipboard.writeText(bl).then(() => {
+      alert('Blacklist copied! Paste into blacklist.json on GitHub.');
+    });
+  }
+
   function clearAllKeys() {
-    if (confirm('Delete ALL keys permanently?')) {
+    if (confirm('Delete ALL keys and add them to blacklist?')) {
+      const keys = getKeys();
+      let bl = getBlacklist();
+      keys.forEach(k => { if (!bl.includes(k.id)) bl.push(k.id); });
+      saveBlacklist(bl);
       localStorage.removeItem(ADMIN_STORAGE);
       renderKeyList(); updateStats();
     }
   }
+
   function getKeyStatus(key) {
     const endTime = key.createdAt + (key.durationHours * 3600000);
     return Date.now() < endTime ? 'active' : 'expired';
   }
+
   function renderKeyList() {
     const keys = getKeys();
     const list = document.getElementById('keyList');
@@ -166,9 +218,10 @@ checkPassword();
       const status = getKeyStatus(k);
       const cls = status === 'active' ? 'key-active' : 'key-expired';
       const txt = status === 'active' ? 'ACTIVE' : 'EXPIRED';
-      return `<div class="key-item"><div class="key-info"><div class="key-id">${k.id}</div><div class="key-meta">${k.note} · ${k.durationHours}h · ${k.maxDevices} dev · <span class="${cls}">${txt}</span></div><div class="key-meta">Created: ${new Date(k.createdAt).toLocaleDateString()} · Activations: ${k.totalActivations}</div></div><button class="btn btn-danger btn-sm" onclick="deleteKey('${k.id}')">DEL</button></div>`;
+      return `<div class="key-item"><div class="key-info"><div class="key-id">${k.id}</div><div class="key-meta">${k.note} · ${k.durationHours}h · ${k.maxDevices} dev · <span class="${cls}">${txt}</span></div><div class="key-meta">Created: ${new Date(k.createdAt).toLocaleDateString()} · Activations: ${k.totalActivations}</div></div><button class="btn btn-danger btn-sm" onclick="deleteKey('${k.id}')">BAN</button></div>`;
     }).join('');
   }
+
   function updateStats() {
     const keys = getKeys();
     let active = 0, expired = 0, devices = 0;
@@ -178,7 +231,10 @@ checkPassword();
     document.getElementById('statExpired').textContent = expired;
     document.getElementById('statDevices').textContent = devices;
   }
-  renderKeyList(); updateStats();
+
+  updateBlacklistUI();
+  renderKeyList();
+  updateStats();
   setInterval(updateStats, 60000);
 </script>
 </body>

@@ -517,6 +517,22 @@ function getLicenseData() {
 }
 
 async function isLicenseValid() {
+  // Проверка чёрного списка с GitHub
+  try {
+    const resp = await fetch('https://wormaxhehehaha-ctrl.github.io/Idk/blacklist.json?t=' + Date.now());
+    const blacklist = await resp.json();
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      const keyId = data.payload ? data.payload.split('|')[0] : null;
+      if (keyId && blacklist.includes(keyId)) {
+        localStorage.removeItem(STORAGE_KEY);
+        return false;
+      }
+    }
+  } catch(e) {}
+
+  // Старая проверка
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return false;
   const data = JSON.parse(raw);
@@ -528,9 +544,7 @@ async function isLicenseValid() {
     if (!valid) return false;
     const endTime = parseInt(data.payload.split('|')[1]);
     return Date.now() <= endTime;
-  } catch (e) {
-    return false;
-  }
+  } catch(e) { return false; }
 }
 
 async function updateUIForLicense() {
@@ -757,7 +771,7 @@ async function checkURLActivation() {
 // ========== INIT ==========
 checkURLActivation();
 updateUIForLicense();
-setInterval(updateUIForLicense, 10000);
+setInterval(updateUIForLicense, 5000);
 </script>
 
 </body>
