@@ -1,0 +1,185 @@
+<script>
+async function checkPassword() {
+  var pw = prompt('Password:','');
+  var hash = '81fb1b4766b08ca34e7943cf2593607444f55b1c051964511ef4df0695385922';
+  var encoder = new TextEncoder();
+  var data = encoder.encode(pw);
+  var hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  var hashArray = Array.from(new Uint8Array(hashBuffer));
+  var hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+  if (hashHex !== hash) {
+    document.write('<h1 style="color:red;text-align:center;margin-top:40vh;">Access Denied</h1>');
+    throw new Error();
+  }
+}
+checkPassword();
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>// ADMIN :: LAGCFG</title>
+<style>
+  :root { --bg: #0A0E17; --cyan: #00E5FF; --purple: #7B2FF7; --white: #FFF; --glass: rgba(10,14,23,0.78); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background: var(--bg); font-family: 'Montserrat', sans-serif; color: var(--white); min-height: 100vh; -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; background-image: linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px); background-size: 40px 40px; }
+  .container { max-width: 430px; margin: 0 auto; padding: 20px 12px 40px; }
+  .card { background: var(--glass); border: 1px solid rgba(0,229,255,0.25); border-radius: 15px; padding: 18px 14px; margin-bottom: 14px; box-shadow: 0 0 20px rgba(0,229,255,0.06); }
+  .card-title { font-family: 'Russo One', sans-serif; font-size: 11px; letter-spacing: 5px; color: var(--cyan); margin-bottom: 14px; text-shadow: 0 0 12px rgba(0,229,255,0.35); text-transform: uppercase; }
+  label { display: block; font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 4px; }
+  input { width: 100%; padding: 11px 13px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); border-radius: 9px; color: #fff; font-family: 'Montserrat', sans-serif; font-size: 13px; letter-spacing: 2px; margin-bottom: 12px; transition: 0.2s; -webkit-appearance: none; }
+  input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,229,255,0.15); }
+  input::placeholder { color: rgba(255,255,255,0.2); letter-spacing: 1px; }
+  .toggle-btns { display: flex; gap: 6px; margin-bottom: 12px; }
+  .toggle-btn { flex: 1; padding: 10px; font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; cursor: pointer; transition: 0.2s; }
+  .toggle-btn.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,229,255,0.1); text-shadow: 0 0 10px var(--cyan); }
+  .btn { display: block; width: 100%; padding: 13px 20px; font-family: 'Russo One', sans-serif; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: #fff; background: linear-gradient(135deg, var(--cyan), var(--purple)); border: none; border-radius: 9px; cursor: pointer; transition: 0.2s; text-align: center; margin-top: 4px; }
+  .btn:active { box-shadow: 0 0 25px rgba(0,229,255,0.5); }
+  .btn-danger { background: linear-gradient(135deg, #ff3366, #cc0055); }
+  .btn-danger:active { box-shadow: 0 0 25px rgba(255,51,102,0.5); }
+  .key-list { display: flex; flex-direction: column; gap: 8px; }
+  .key-item { display: flex; justify-content: space-between; align-items: center; padding: 11px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; font-size: 9px; letter-spacing: 1px; gap: 8px; }
+  .key-info { flex: 1; min-width: 0; }
+  .key-id { color: var(--cyan); font-weight: 600; font-size: 11px; word-break: break-all; }
+  .key-meta { font-size: 7px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+  .key-active { color: #00ff88; }
+  .key-expired { color: #ff3366; }
+  .btn-sm { padding: 6px 10px; font-size: 7px; letter-spacing: 2px; border-radius: 6px; width: auto; flex-shrink: 0; }
+  .link-box { background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.3); border-radius: 8px; padding: 10px; font-size: 11px; letter-spacing: 2px; word-break: break-all; color: var(--cyan); margin: 6px 0; cursor: pointer; transition: 0.2s; text-align: center; font-weight: 600; }
+  .link-box:active { background: rgba(0,229,255,0.12); }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-item { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 13px; text-align: center; }
+  .stat-val { font-family: 'Russo One', sans-serif; font-size: 20px; color: var(--cyan); }
+  .stat-label { font-size: 7px; letter-spacing: 2px; color: rgba(255,255,255,0.4); margin-top: 2px; text-transform: uppercase; }
+  .copy-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--cyan); color: #000; padding: 8px 18px; border-radius: 14px; font-size: 9px; letter-spacing: 2px; font-weight: 600; opacity: 0; transition: 0.25s; pointer-events: none; z-index: 999; }
+  .copy-toast.show { opacity: 1; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+  <div class="card" style="text-align:center;">
+    <div style="font-family:'Russo One',sans-serif;font-size:20px;letter-spacing:7px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ADMIN PANEL</div>
+    <div style="font-size:7px;letter-spacing:3px;color:rgba(255,255,255,0.3);text-transform:uppercase;">VIP Key Management</div>
+  </div>
+  <div class="card">
+    <div class="card-title">// Generate VIP Key</div>
+    <label>Time Unit</label>
+    <div class="toggle-btns" id="timeUnitGroup">
+      <div class="toggle-btn active" data-unit="hours">Hours</div>
+      <div class="toggle-btn" data-unit="days">Days</div>
+    </div>
+    <label>Duration (<span id="unitLabel">hours</span>)</label>
+    <input type="number" id="durationValue" placeholder="e.g. 24" min="1" value="24">
+    <label>Max Devices</label>
+    <input type="number" id="maxDevices" placeholder="e.g. 1" min="1" value="1">
+    <label>Note / Client Name (optional)</label>
+    <input type="text" id="note" placeholder="e.g. JohnDoe">
+    <button class="btn" onclick="generateKey()">Generate VIP Key</button>
+    <div id="generatedLink" style="display:none; margin-top:14px;">
+      <label>License Key (tap to copy)</label>
+      <div class="link-box" id="activationLink" onclick="copyKey()"></div>
+      <div style="font-size:7px;letter-spacing:1px;color:rgba(255,255,255,0.25);margin-top:4px;">Send this key to the client</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">// All Keys</div>
+    <div class="key-list" id="keyList"><div style="color:rgba(255,255,255,0.3);font-size:8px;">No keys created</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">// Statistics</div>
+    <div class="stat-grid">
+      <div class="stat-item"><div class="stat-val" id="statTotal">0</div><div class="stat-label">Total</div></div>
+      <div class="stat-item"><div class="stat-val" id="statActive" style="color:#00ff88;">0</div><div class="stat-label">Active</div></div>
+      <div class="stat-item"><div class="stat-val" id="statExpired" style="color:#ff3366;">0</div><div class="stat-label">Expired</div></div>
+      <div class="stat-item"><div class="stat-val" id="statDevices">0</div><div class="stat-label">Devices</div></div>
+    </div>
+  </div>
+  <div class="card" style="text-align:center;">
+    <button class="btn btn-danger" onclick="clearAllKeys()">Clear All Keys</button>
+    <div style="font-size:6px;letter-spacing:1px;color:rgba(255,255,255,0.2);margin-top:5px;">Permanent · cannot be undone</div>
+  </div>
+</div>
+<div class="copy-toast" id="toast">COPIED ✓</div>
+<script>
+  const ADMIN_STORAGE = 'chito_admin_keys';
+  let timeUnit = 'hours';
+  document.querySelectorAll('#timeUnitGroup .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#timeUnitGroup .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      timeUnit = btn.dataset.unit;
+      document.getElementById('unitLabel').textContent = timeUnit;
+    });
+  });
+  function getKeys() { return JSON.parse(localStorage.getItem(ADMIN_STORAGE) || '[]'); }
+  function saveKeys(keys) { localStorage.setItem(ADMIN_STORAGE, JSON.stringify(keys)); }
+  function generateKey() {
+    const durationValue = parseInt(document.getElementById('durationValue').value);
+    const maxDevices = parseInt(document.getElementById('maxDevices').value);
+    const note = document.getElementById('note').value.trim() || 'No note';
+    if (!durationValue || durationValue < 1) { alert('Please enter a valid duration.'); return; }
+    if (!maxDevices || maxDevices < 1) { alert('Please enter a valid number of devices.'); return; }
+    let durationHours = timeUnit === 'days' ? durationValue * 24 : durationValue;
+    const part1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const part2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const part3 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const keyId = `VIP-${part1}-${part2}-${part3}`;
+    const keys = getKeys();
+    const newKey = { id: keyId, durationHours, maxDevices, note, createdAt: Date.now(), totalActivations: 0 };
+    keys.push(newKey);
+    saveKeys(keys);
+    document.getElementById('activationLink').textContent = keyId;
+    document.getElementById('generatedLink').style.display = 'block';
+    renderKeyList(); updateStats();
+  }
+  function deleteKey(keyId) {
+    let keys = getKeys();
+    keys = keys.filter(k => k.id !== keyId);
+    saveKeys(keys);
+    renderKeyList(); updateStats();
+  }
+  function copyKey() {
+    const key = document.getElementById('activationLink').textContent;
+    navigator.clipboard.writeText(key).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1700);
+    });
+  }
+  function clearAllKeys() {
+    if (confirm('Delete ALL keys permanently?')) {
+      localStorage.removeItem(ADMIN_STORAGE);
+      renderKeyList(); updateStats();
+    }
+  }
+  function getKeyStatus(key) {
+    const endTime = key.createdAt + (key.durationHours * 3600000);
+    return Date.now() < endTime ? 'active' : 'expired';
+  }
+  function renderKeyList() {
+    const keys = getKeys();
+    const list = document.getElementById('keyList');
+    if (keys.length === 0) { list.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:8px;">No keys created</div>'; return; }
+    list.innerHTML = keys.map(k => {
+      const status = getKeyStatus(k);
+      const cls = status === 'active' ? 'key-active' : 'key-expired';
+      const txt = status === 'active' ? 'ACTIVE' : 'EXPIRED';
+      return `<div class="key-item"><div class="key-info"><div class="key-id">${k.id}</div><div class="key-meta">${k.note} · ${k.durationHours}h · ${k.maxDevices} dev · <span class="${cls}">${txt}</span></div><div class="key-meta">Created: ${new Date(k.createdAt).toLocaleDateString()} · Activations: ${k.totalActivations}</div></div><button class="btn btn-danger btn-sm" onclick="deleteKey('${k.id}')">DEL</button></div>`;
+    }).join('');
+  }
+  function updateStats() {
+    const keys = getKeys();
+    let active = 0, expired = 0, devices = 0;
+    keys.forEach(k => { devices += k.totalActivations; getKeyStatus(k) === 'active' ? active++ : expired++; });
+    document.getElementById('statTotal').textContent = keys.length;
+    document.getElementById('statActive').textContent = active;
+    document.getElementById('statExpired').textContent = expired;
+    document.getElementById('statDevices').textContent = devices;
+  }
+  renderKeyList(); updateStats();
+  setInterval(updateStats, 60000);
+</script>
+</body>
+</html>
