@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>// LAGCFG :: VIP CONFIG</title>
+<style>
+  :root {
+    --bg: #0A0E17;
+    --cyan: #00E5FF;
+    --blue: #0080FF;
+    --purple: #7B2FF7;
+    --white: #FFFFFF;
+    --glass: rgba(10,14,23,0.78);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Montserrat', sans-serif;
+    color: var(--white);
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,14,23,0.9);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(0,229,255,0.22);
+    padding: 14px 14px 0;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .logo {
+    font-family: 'Russo One', sans-serif;
+    font-size: 19px;
+    letter-spacing: 7px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .vip-badge {
+    font-size: 7px;
+    letter-spacing: 3px;
+    padding: 4px 10px;
+    border: 1px solid rgba(0,229,255,0.5);
+    border-radius: 10px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    display: none;
+  }
+  .vip-badge.active { display: inline-block; }
+
+  .tabs { display: flex; gap: 4px; }
+  .tab-btn {
+    flex: 1;
+    padding: 11px 6px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+    text-shadow: 0 0 14px rgba(0,229,255,0.5);
+  }
+
+  .main { max-width: 430px; margin: 0 auto; padding: 18px 12px 40px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .card {
+    background: var(--glass);
+    border: 1px solid rgba(0,229,255,0.22);
+    border-radius: 15px;
+    padding: 18px 14px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(123,47,247,0.2);
+    border-radius: 12px;
+    pointer-events: none;
+  }
+  .card-title {
+    font-family: 'Russo One', sans-serif;
+    font-size: 11px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--cyan), var(--white));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 16px;
+  }
+
+  .input-field {
+    width: 100%;
+    padding: 13px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 10px;
+    color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-align: center;
+    transition: 0.2s;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 18px rgba(0,229,255,0.18);
+  }
+  .input-field::placeholder {
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 1px;
+  }
+
+  .toggle-group { display: flex; flex-direction: column; gap: 9px; }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 12px;
+    background: rgba(255,255,255,0.025);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .toggle-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.85);
+  }
+  .toggle-desc {
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 2px;
+  }
+  .toggle-switch {
+    position: relative;
+    width: 44px; height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.12);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: 0.3s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    height: 18px; width: 18px;
+    left: 2px; bottom: 2px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 50%;
+    transition: 0.3s;
+  }
+  input:checked + .toggle-slider {
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    box-shadow: 0 0 12px rgba(0,229,255,0.4);
+    border-color: var(--cyan);
+  }
+  input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+    background: #fff;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 13px 20px;
+    font-family: 'Russo One', sans-serif;
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #fff;
+    background: transparent;
+    border: 2px solid var(--cyan);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: 0.3s;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    margin-top: 14px;
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    opacity: 0;
+    transition: 0.3s;
+  }
+  .btn:active::before { opacity: 1; }
+  .btn span { position: relative; z-index: 1; }
+  .btn:active { border-color: transparent; box-shadow: 0 0 22px rgba(0,229,255,0.5); }
+  .btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    border-color: rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.3);
+  }
+
+  .steps { display: flex; flex-direction: column; gap: 9px; }
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 9px;
+    border-left: 2px solid var(--cyan);
+  }
+  .step-num {
+    font-family: 'Russo One', sans-serif;
+    font-size: 15px;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+    min-width: 22px;
+  }
+  .step-text {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.6;
+  }
+  .step-text strong { color: var(--cyan); }
+
+  .status-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  .status-row:last-child { border: none; }
+  .status-label { color: rgba(255,255,255,0.5); }
+  .status-val { color: var(--cyan); font-weight: 600; }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.3s;
+    padding: 20px;
+  }
+  .modal-overlay.active { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--glass);
+    border: 1px solid rgba(0,229,255,0.5);
+    border-radius: 20px;
+    padding: 30px 22px;
+    text-align: center;
+    width: 100%;
+    max-width: 310px;
+    box-shadow: 0 0 35px rgba(0,229,255,0.25), inset 0 0 40px rgba(0,229,255,0.03);
+    position: relative;
+  }
+  .modal::before {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border: 1px solid rgba(123,47,247,0.28);
+    border-radius: 15px;
+    pointer-events: none;
+  }
+  .modal-icon {
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00E5FF, #7B2FF7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+    font-size: 26px;
+    color: #fff;
+    box-shadow: 0 0 30px rgba(0,229,255,0.55);
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popIn {
+    0% { transform: scale(0) rotate(-130deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  .modal-title {
+    font-family: 'Russo One', sans-serif;
+    font-size: 17px;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--cyan), #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .modal-subtitle {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 3px;
+  }
+  .modal-list {
+    text-align: left;
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.45);
+    margin: 10px 0;
+    padding-left: 14px;
+    list-style: none;
+  }
+  .modal-list li { margin: 3px 0; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-row">
+    <div class="logo">LAGCFG</div>
+    <div class="vip-badge" id="vipBadge">VIP</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tab-unlock">Unlock</button>
+    <button class="tab-btn" data-tab="tab-config">Config</button>
+    <button class="tab-btn" data-tab="tab-download">Download</button>
+    <button class="tab-btn" data-tab="tab-status">Status</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="tab-content active" id="tab-unlock">
+    <div class="card">
+      <div class="card-title">// Enter License Key</div>
+      <input type="text" class="input-field" id="keyInput" placeholder="VIP-XXXX-XXXX-XXXX" autocomplete="off">
+      <button class="btn" onclick="activateKey()"><span>Activate VIP Access</span></button>
+      <div style="font-size:7px;letter-spacing:1px;color:rgba(255,255,255,0.25);margin-top:10px;text-align:center;">
+        All features locked until a valid key is entered
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-config">
+    <div class="card">
+      <div class="card-title">// Module 01 · Aim Config</div>
+      <div class="toggle-group">
+        <div class="toggle-row">
+          <div><div class="toggle-label">Aim Assist Boost</div><div class="toggle-desc">Magnetic aim assist 85%</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="toggleAA" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">FPS Boost</div><div class="toggle-desc">Unlock 120 FPS + render optimization</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="toggleFPS" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Head Hitbox Priority</div><div class="toggle-desc">Prioritize head hitbox zone</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="toggleHead"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Recoil Stabilizer</div><div class="toggle-desc">Vertical recoil compensation</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="toggleRecoil" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Ping Optimizer</div><div class="toggle-desc">CODM game DNS servers</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="toggleDNS" checked><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <button class="btn" id="applyBtn" onclick="applyConfig()" disabled><span>Apply Config</span></button>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-download">
+    <div class="card">
+      <div class="card-title">// Module 02 · Download</div>
+      <p style="font-size:9px;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-bottom:14px;line-height:1.6;">
+        Game DNS servers + Aim Assist 85%<br>IPv4 &amp; IPv6 · CODM Global/Garena/CN
+      </p>
+      <button class="btn" id="downloadBtn" onclick="downloadMobileconfig()" disabled><span>Download .mobileconfig</span></button>
+    </div>
+    <div class="card">
+      <div class="card-title">// Install Guide</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">01</div><div class="step-text"><strong>Download</strong> the .mobileconfig file above</div></div>
+        <div class="step"><div class="step-num">02</div><div class="step-text">Open <strong>Settings</strong> → <strong>Profile Downloaded</strong></div></div>
+        <div class="step"><div class="step-num">03</div><div class="step-text">Tap <strong>Install</strong> → enter your device passcode</div></div>
+        <div class="step"><div class="step-num">04</div><div class="step-text">Restart <strong>CODM</strong> — config is live</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-status">
+    <div class="card">
+      <div class="card-title">// Module 03 · Key Status</div>
+      <div id="statusPanel">
+        <div style="color:rgba(255,255,255,0.35);font-size:9px;text-align:center;padding:20px 0;">No active VIP key</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modalSuccess">
+  <div class="modal">
+    <div class="modal-icon">✓</div>
+    <div class="modal-title">Success</div>
+    <div class="modal-subtitle">All configs activated</div>
+    <ul class="modal-list">
+      <li>✓ Aim Assist 85%</li>
+      <li>✓ FPS Boost</li>
+      <li>✓ DNS Game Servers</li>
+      <li>✓ Recoil Stabilizer</li>
+      <li id="modalHeadItem" style="display:none;">✓ Head Hitbox Priority</li>
+    </ul>
+    <div class="modal-subtitle">Launch CODM now</div>
+    <button class="btn" style="margin-top:14px;" onclick="closeModal('modalSuccess')"><span>OK</span></button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalVip">
+  <div class="modal">
+    <div class="modal-icon">⚡</div>
+    <div class="modal-title">VIP Access Granted</div>
+    <div class="modal-subtitle">Premium configs unlocked</div>
+    <ul class="modal-list">
+      <li>✓ Aim Assist Boost</li>
+      <li>✓ FPS Optimization</li>
+      <li>✓ DNS Game Servers</li>
+      <li>✓ Full Access Unlocked</li>
+    </ul>
+    <button class="btn" style="margin-top:14px;" onclick="closeModal('modalVip')"><span>Enter Dashboard</span></button>
+  </div>
+</div>
+
+<script>
+// ========== WEB CRYPTO KEY STORE ==========
+const KEY_STORE = 'lagcfg_keyring';
+function openKeyStore() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(KEY_STORE, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('keys');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function saveCryptoKey(cryptoKey) {
+  const db = await openKeyStore();
+  const tx = db.transaction('keys', 'readwrite');
+  tx.objectStore('keys').put(cryptoKey, 'signing-key');
+  return new Promise(r => { tx.oncomplete = r; });
+}
+async function loadCryptoKey() {
+  const db = await openKeyStore();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('keys').objectStore('keys').get('signing-key');
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function signData(data, key) {
+  const enc = new TextEncoder().encode(data);
+  const sig = await crypto.subtle.sign('HMAC', key, enc);
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function verifyData(data, signature, key) {
+  const enc = new TextEncoder().encode(data);
+  const sigBytes = new Uint8Array(signature.match(/.{2}/g).map(b => parseInt(b, 16)));
+  return crypto.subtle.verify('HMAC', key, sigBytes, enc);
+}
+
+// ========== STORAGE KEYS ==========
+const STORAGE_KEY = 'chito_license';
+const ADMIN_KEY = 'chito_admin_keys';
+
+// ========== LICENSE FUNCTIONS ==========
+function getLicenseData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function isLicenseValid() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return false;
+  const data = JSON.parse(raw);
+  if (!data.payload || !data.sig) return false;
+  const cryptoKey = await loadCryptoKey();
+  if (!cryptoKey) return false;
+  try {
+    const valid = await verifyData(data.payload, data.sig, cryptoKey);
+    if (!valid) return false;
+    const endTime = parseInt(data.payload.split('|')[1]);
+    return Date.now() <= endTime;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function updateUIForLicense() {
+  const valid = await isLicenseValid();
+  const vipBadge = document.getElementById('vipBadge');
+  const applyBtn = document.getElementById('applyBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  if (valid) {
+    vipBadge.classList.add('active');
+    applyBtn.disabled = false;
+    downloadBtn.disabled = false;
+  } else {
+    vipBadge.classList.remove('active');
+    applyBtn.disabled = true;
+    downloadBtn.disabled = true;
+    const data = getLicenseData();
+    if (data) {
+      const currentTab = document.querySelector('.tab-content.active');
+      if (currentTab && currentTab.id !== 'tab-unlock') {
+        switchTab('tab-unlock');
+      }
+    }
+  }
+  updateStatusPanel();
+}
+
+async function updateStatusPanel() {
+  const panel = document.getElementById('statusPanel');
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    panel.innerHTML = '<div style="color:rgba(255,255,255,0.35);font-size:9px;text-align:center;padding:20px 0;">No active VIP key</div>';
+    return;
+  }
+  const data = JSON.parse(raw);
+  const valid = await isLicenseValid();
+  const keyId = data.payload ? data.payload.split('|')[0] : 'Unknown';
+
+  if (!valid) {
+    panel.innerHTML = `
+      <div class="status-row"><span class="status-label">Key ID</span><span class="status-val">${keyId}</span></div>
+      <div class="status-row"><span class="status-label">Status</span><span class="status-val" style="color:#ff3366;">EXPIRED</span></div>
+      <div style="color:#ff3366;font-size:8px;text-align:center;margin-top:12px;letter-spacing:1px;">License expired · enter a new key</div>`;
+    return;
+  }
+
+  const endTime = parseInt(data.payload.split('|')[1]);
+  const remaining = endTime - Date.now();
+  const days = Math.floor(remaining / 86400000);
+  const hours = Math.floor((remaining % 86400000) / 3600000);
+  const mins = Math.floor((remaining % 3600000) / 60000);
+  panel.innerHTML = `
+    <div class="status-row"><span class="status-label">Key ID</span><span class="status-val">${keyId}</span></div>
+    <div class="status-row"><span class="status-label">Status</span><span class="status-val" style="color:#00ff88;">ACTIVE</span></div>
+    <div class="status-row"><span class="status-label">Remaining</span><span class="status-val">${days}d ${hours}h ${mins}m</span></div>
+    <div class="status-row"><span class="status-label">Activated</span><span class="status-val">${new Date(endTime - (remaining < 0 ? 0 : 0)).toLocaleDateString()}</span></div>`;
+}
+
+// ========== ACTIVATION ==========
+async function activateKey() {
+  const keyInput = document.getElementById('keyInput').value.trim();
+  if (!keyInput) { alert('Please enter a license key.'); return; }
+
+  const adminKeys = JSON.parse(localStorage.getItem(ADMIN_KEY) || '[]');
+  const foundKey = adminKeys.find(k => k.id === keyInput);
+
+  if (!foundKey) { alert('Invalid key. Please check and try again.'); return; }
+
+  const existing = getLicenseData();
+  if (existing && existing.payload && existing.payload.split('|')[0] === keyInput && (await isLicenseValid())) {
+    alert('This key is already active on this device.');
+    await updateUIForLicense();
+    switchTab('tab-config');
+    return;
+  }
+
+  const durationHours = foundKey.durationHours;
+  const endTime = Date.now() + (durationHours * 3600000);
+
+  let cryptoKey = await loadCryptoKey();
+  if (!cryptoKey) {
+    cryptoKey = await crypto.subtle.generateKey(
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign', 'verify']
+    );
+    await saveCryptoKey(cryptoKey);
+  }
+
+  const payload = `${keyInput}|${endTime}`;
+  const signature = await signData(payload, cryptoKey);
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ payload, sig: signature }));
+
+  foundKey.totalActivations = (foundKey.totalActivations || 0) + 1;
+  const updatedKeys = adminKeys.map(k => k.id === keyInput ? foundKey : k);
+  localStorage.setItem(ADMIN_KEY, JSON.stringify(updatedKeys));
+
+  await updateUIForLicense();
+  document.getElementById('modalVip').classList.add('active');
+}
+
+// ========== APPLY CONFIG ==========
+async function applyConfig() {
+  if (!(await isLicenseValid())) { alert('VIP access required.'); return; }
+  document.getElementById('modalHeadItem').style.display = document.getElementById('toggleHead').checked ? 'list-item' : 'none';
+  document.getElementById('modalSuccess').classList.add('active');
+}
+
+// ========== DOWNLOAD ==========
+async function downloadMobileconfig() {
+  if (!(await isLicenseValid())) { alert('VIP access required.'); return; }
+
+  const raw = localStorage.getItem(STORAGE_KEY);
+  const data = JSON.parse(raw);
+  const endTime = parseInt(data.payload.split('|')[1]);
+  const expDate = new Date(endTime).toISOString();
+
+  const includeDNS = document.getElementById('toggleDNS').checked;
+  const gameDNS = `
+      <key>DNS</key>
+      <dict>
+        <key>ServerAddresses</key>
+        <array>
+          <string>149.112.112.112</string>
+          <string>185.228.168.9</string>
+          <string>94.140.14.14</string>
+          <string>76.76.2.0</string>
+          <string>2001:4860:4860::8888</string>
+          <string>2001:4860:4860::8844</string>
+        </array>
+        <key>SupplementalMatchDomains</key>
+        <array>
+          <string>codm.activision.com</string>
+          <string>codmobile.cn</string>
+          <string>garena.com</string>
+          <string>tencent.com</string>
+        </array>
+      </dict>`;
+
+  const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadType</key>
+      <string>com.apple.dnsSettings.managed</string>
+      <key>PayloadIdentifier</key>
+      <string>com.chito.dns</string>
+      <key>PayloadUUID</key>
+      <string>${uuid()}</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      ${includeDNS ? gameDNS : ''}
+    </dict>
+  </array>
+  <key>PayloadDisplayName</key>
+  <string>LAGCFG CODM Config</string>
+  <key>PayloadIdentifier</key>
+  <string>com.chito.codmconfig</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>${uuid()}</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+  <key>PayloadExpirationDate</key>
+  <date>${expDate}</date>
+</dict>
+</plist>`;
+
+  const blob = new Blob([xml], { type: 'application/x-apple-aspen-config' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'LAGCFG_CODM_Config.mobileconfig';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ========== UI HELPERS ==========
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+}
+
+// ========== TAB CLICKS ==========
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const tabId = btn.dataset.tab;
+    if ((tabId === 'tab-config' || tabId === 'tab-download' || tabId === 'tab-status') && !(await isLicenseValid())) {
+      alert('VIP access required. Please activate a key in the Unlock tab first.');
+      return;
+    }
+    switchTab(tabId);
+  });
+});
+
+// ========== URL ACTIVATION ==========
+async function checkURLActivation() {
+  const params = new URLSearchParams(window.location.search);
+  const key = params.get('key');
+  if (!key) return;
+  document.getElementById('keyInput').value = key;
+  await activateKey();
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+// ========== INIT ==========
+checkURLActivation();
+updateUIForLicense();
+setInterval(updateUIForLicense, 10000);
+</script>
+
+</body>
+</html>
